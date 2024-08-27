@@ -112,29 +112,19 @@ TorrServer-darwin-arm64 [--port PORT] [--path PATH] [--logpath LOGPATH] [--weblo
 Run in console
 
 ```bash
-docker run --rm -d --name torrserver -p 8090:8090 ghcr.io/yourok/torrserver:latest
+docker run --rm -d --name torrserver -p 1024:6881 ghcr.io/sleepy0/torrserver:latest
 ```
 
-For running in persistence mode, just mount volume to container by adding `-v ~/ts:/opt/ts`, where `~/ts` folder path is just example, but you could use it anyway... Result example command:
+For running in persistence mode, just mount volume to container by adding `-v ~/ts:/app`, where `~/ts` folder path is just example, but you could use it anyway... Result example command:
 
 ```bash
-docker run --rm -d --name torrserver -v ~/ts:/opt/ts -p 8090:8090 ghcr.io/yourok/torrserver:latest
+docker run --rm -d --name torrserver -v ~/ts:/app -p 1024:6881 ghcr.io/sleepy0/torrserver:latest
 ```
 
-#### Environments
-
-- `TS_HTTPAUTH` - 1, and place auth file into `~/ts/config` folder for enabling basic auth
-- `TS_RDB` - if 1, then the enabling `--rdb` flag
-- `TS_DONTKILL` - if 1, then the enabling `--dontkill` flag
-- `TS_PORT` - for changind default port to **5555** (example), also u need to change `-p 8090:8090` to `-p 5555:5555` (example)
-- `TS_CONF_PATH` - for overriding torrserver config path inside container. Example `/opt/tsss`
-- `TS_TORR_DIR` - for overriding torrents directory. Example `/opt/torr_files`
-- `TS_LOG_PATH` - for overriding log path. Example `/opt/torrserver.log`
-
-Example with full overrided command (on default values):
+Example with optional parameters:
 
 ```bash
-docker run --rm -d -e TS_PORT=5665 -e TS_DONTKILL=1 -e TS_HTTPAUTH=1 -e TS_RDB=1 -e TS_CONF_PATH=/opt/ts/config -e TS_LOG_PATH=/opt/ts/log -e TS_TORR_DIR=/opt/ts/torrents --name torrserver -v ~/ts:/opt/ts -p 5665:5665 ghcr.io/yourok/torrserver:latest
+docker run --rm -d --name torrserver -v ~/ts:/app -p 1024:6881 ghcr.io/sleepy0/torrserver:latest --dontkill
 ```
 
 #### Docker Compose
@@ -142,23 +132,30 @@ docker run --rm -d -e TS_PORT=5665 -e TS_DONTKILL=1 -e TS_HTTPAUTH=1 -e TS_RDB=1
 ```yml
 # docker-compose.yml
 
-version: '3.3'
 services:
-    torrserver:
-        image: ghcr.io/yourok/torrserver
-        container_name: torrserver
-        environment:
-            - TS_PORT=5665
-            - TS_DONTKILL=1
-            - TS_HTTPAUTH=0
-            - TS_CONF_PATH=/opt/ts/config
-            - TS_TORR_DIR=/opt/ts/torrents
-        volumes:
-            - './CACHE:/opt/ts/torrents'
-            - './CONFIG:/opt/ts/config'
-        ports:
-            - '5665:5665'
-        restart: unless-stopped
+  torrserver:
+    image: ghcr.io/sleepy0/torrserver:latest
+    container_name: torrserver
+    volumes:
+      - './.torrents:/app/torrents'
+      - './.config:/app/config'
+    ports:
+      - '1024:6881/tcp'
+      - '1024:6881/udp'
+    restart: unless-stopped
+    command: ["--dontkill"]
+    labels:
+      - homepage.group=Links
+      - homepage.name=torrserver
+      - homepage.description=Simple and powerful tool for streaming torrents
+      - homepage.icon=torrserver
+      - homepage.href=https://subdomain.domain.tld/
+    
+
+networks:
+  default:
+    name: caddy_default
+    external: true
 
 ```
 
