@@ -1,5 +1,5 @@
 ### FRONT BUILD START ###
-FROM --platform=$BUILDPLATFORM node:16-alpine as front
+FROM --platform=$BUILDPLATFORM node:16-alpine AS front
 COPY ./web /app
 WORKDIR /app
 # Build front once upon multiarch build
@@ -8,7 +8,7 @@ RUN yarn install && yarn run build
 
 
 ### BUILD TORRSERVER MULTIARCH START ###
-FROM --platform=$BUILDPLATFORM golang:1.21.2-alpine as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.2-alpine AS builder
 
 COPY . /opt/src
 COPY --from=front /app/build /opt/src/web/build
@@ -31,7 +31,7 @@ RUN apk add --update g++ \
 
 
 ### UPX COMPRESSING START ###
-FROM debian:buster-slim as compressed
+FROM debian:buster-slim AS compressed
 
 COPY --from=builder /opt/src/server/torrserver ./torrserver
 
@@ -47,16 +47,21 @@ RUN apt-get update && apt-get install -y upx-ucl && upx --best --lzma ./torrserv
 ### BUILD MAIN IMAGE START ###
 FROM alpine
 
-ENV TS_CONF_PATH="/opt/ts/config"
-ENV TS_LOG_PATH="/opt/ts/log"
-ENV TS_TORR_DIR="/opt/ts/torrents"
-ENV TS_PORT=8090
+ENV TS_CONF_PATH="/app/config"
+ENV TS_TORR_DIR="/app/torrents"
+ENV TS_HTTP_PORT=80
+ENV TS_TORR_PORT=6881
 ENV GODEBUG=madvdontneed=1
 
-COPY --from=compressed ./torrserver /usr/bin/torrserver
-COPY ./docker-entrypoint.sh /docker-entrypoint.sh
+EXPOSE ${TS_HTTP_PORT}
+EXPOSE ${TS_TORR_PORT}/tcp
+EXPOSE ${TS_TORR_PORT}/udp
 
-RUN apk add --no-cache --update ffmpeg
+COPY --from=compressed ./torrserver /usr/local/bin/torrserver
 
-CMD /docker-entrypoint.sh
+RUN apk add --no-cache --update ffmpeg \
+    && mkdir -p $TS_CONF_PATH \
+    && mkdir -p $TS_TORR_DIR
+
+ENTRYPOINT torrserver --path $TS_CONF_PATH --port "$TS_HTTP_PORT" --torrentsdir "$TS_TORR_DIR" --torrentaddr ":$TS_TORR_PORT"
 ### BUILD MAIN IMAGE end ###
