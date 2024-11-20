@@ -9,11 +9,12 @@ import { useMediaQuery } from '@material-ui/core'
 import CircularProgress from '@material-ui/core/CircularProgress'
 import usePreviousState from 'utils/usePreviousState'
 import { useQuery } from 'react-query'
-import { getTorrents } from 'utils/Utils'
+import { getTorrents, removeRedundantCharacters } from 'utils/Utils'
 import parseTorrent from 'parse-torrent'
 import { ButtonWrapper } from 'style/DialogStyles'
 import { StyledDialog, StyledHeader } from 'style/CustomMaterialUiStyles'
 import useOnStandaloneAppOutsideClick from 'utils/useOnStandaloneAppOutsideClick'
+import ptt from 'parse-torrent-title'
 
 import { checkImageURL, getMoviePosters, checkTorrentSource, parseTorrentTitle } from './helpers'
 import { Content } from './style'
@@ -198,6 +199,15 @@ export default function AddDialog({
     skipDebounce,
     isUserInteractedWithPoster,
   ])
+
+  useEffect(() => {
+    if (!isEditMode || posterUrl || posterList) return
+    const regex = /[a-zA-Zа-яА-Я0-9\s.\-/]+/g
+    const parsedTitle = removeRedundantCharacters(ptt.parse(title)?.title || '')
+      .match(regex)?.[0]
+      .trim()
+    posterSearch(parsedTitle, posterSearchLanguage)
+  }, [isEditMode, posterUrl, title, posterList, posterSearchLanguage, posterSearch])
 
   const handleSave = () => {
     setIsSaving(true)
